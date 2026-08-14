@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CLAP deploy live view</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0c10;
+    --panel: #15171c;
+    --border: #262a33;
+    --text: #e6e8eb;
+    --muted: #8b93a1;
+    --accent: #5ec2ff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body { display: flex; flex-direction: column; }
+  h1 {
+    flex: 0 0 auto; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; color: var(--muted);
+    margin: 0; padding: 20px 24px 0; text-transform: uppercase;
+  }
+  #layout {
+    display: flex; flex: 1 1 auto; min-height: 0; flex-wrap: wrap; align-items: flex-start;
+    justify-content: center; gap: 24px; padding: 24px; overflow: auto;
+  }
+  #main { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 1 1 480px; max-width: 1100px; }
+  #frame-wrap {
+    width: 100%; height: 80vh; max-height: 960px; background: #000; border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  #frame { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: none; }
+  #placeholder { color: var(--muted); font-size: 13px; text-align: center; padding: 0 20px; }
+  #status-bar { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  #dot { width: 8px; height: 8px; border-radius: 50%; background: #e5484d; transition: background 0.2s; }
+  #dot.connected { background: #30d158; }
+  #panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; flex: 0 0 300px; display: flex; flex-direction: column; gap: 18px;
+  }
+  .group-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  #round { font-size: 28px; font-weight: 700; color: var(--accent); }
+  #round span { font-size: 15px; color: var(--muted); font-weight: 400; }
+  #progress-track { width: 100%; height: 6px; border-radius: 3px; background: #1d2027; overflow: hidden; margin-top: 10px; }
+  #progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
+  #instruction { font-size: 15px; line-height: 1.5; }
+  #episode { font-size: 13px; color: var(--muted); }
+  .session-row { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+  .session-row .label { color: var(--muted); }
+  .session-row .value { color: var(--text); font-weight: 600; }
+  #seed-wrap {
+    width: 100%; aspect-ratio: 4 / 3; background: #000; border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  #seed-frame { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: none; }
+  #seed-placeholder { color: var(--muted); font-size: 11px; text-align: center; padding: 0 10px; }
+</style>
+</head>
+<body>
+<h1>CLAP Deploy -- Live View</h1>
+<div id="layout">
+  <div id="main">
+    <div id="frame-wrap">
+      <img id="frame" alt="predicted frame">
+      <div id="placeholder">waiting for the first predicted frame&hellip;<br>run examples/getting_started/deploy.sh</div>
+    </div>
+    <div id="status-bar"><div id="dot"></div><span id="status">connecting&hellip;</span></div>
+  </div>
+
+  <div id="panel">
+    <div>
+      <div class="group-title">Session</div>
+      <div class="session-row"><span class="label">Dataset</span><span class="value" id="dataset-val">&mdash;</span></div>
+      <div class="session-row"><span class="label">Model</span><span class="value" id="model-val">&mdash;</span></div>
+    </div>
+    <div>
+      <div class="group-title">Initial Frame</div>
+      <div id="seed-wrap">
+        <img id="seed-frame" alt="initial frame">
+        <div id="seed-placeholder">waiting for session start&hellip;</div>
+      </div>
+    </div>
+    <div>
+      <div class="group-title">Episode</div>
+      <div id="episode">&mdash;</div>
+    </div>
+    <div>
+      <div class="group-title">Policy round</div>
+      <div id="round">&mdash;<span> / &mdash;</span></div>
+      <div id="progress-track"><div id="progress-fill"></div></div>
+    </div>
+    <div>
+      <div class="group-title">Instruction</div>
+      <div id="instruction">&mdash;</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Same host clap-rollout-deploy's LiveViewServer binds to (localhost by default) -- override
+  // the port with ?port=NNNN if you started deploy.sh with a non-default --live-view-ws-port.
+  const port = new URLSearchParams(location.search).get("port") || 8765;
+  const statusEl = document.getElementById("status");
+  const dotEl = document.getElementById("dot");
+  const img = document.getElementById("frame");
+  const placeholder = document.getElementById("placeholder");
+  const roundEl = document.getElementById("round");
+  const progressEl = document.getElementById("progress-fill");
+  const instructionEl = document.getElementById("instruction");
+  const episodeEl = document.getElementById("episode");
+  const seedImg = document.getElementById("seed-frame");
+  const seedPlaceholder = document.getElementById("seed-placeholder");
+  const datasetEl = document.getElementById("dataset-val");
+  const modelEl = document.getElementById("model-val");
+
+  function connect() {
+    const ws = new WebSocket(`ws://localhost:${port}`);
+    ws.onopen = () => { statusEl.textContent = `connected (ws://localhost:${port})`; dotEl.classList.add("connected"); };
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.dataset !== undefined) datasetEl.textContent = msg.dataset || "—";
+      if (msg.ckpt_name !== undefined) modelEl.textContent = msg.ckpt_name || "—";
+      if (msg.episode_id !== undefined) episodeEl.textContent = msg.episode_id;
+      if (msg.instruction !== undefined) instructionEl.textContent = msg.instruction || "(none)";
+      if (msg.seed) {
+        // Own slot -- this episode's real first frame, set once per episode and never
+        // overwritten by later live-prediction frames.
+        seedImg.src = "data:image/jpeg;base64," + msg.image;
+        seedImg.style.display = "block";
+        seedPlaceholder.style.display = "none";
+        if (msg.total !== undefined) { roundEl.innerHTML = `0<span> / ${msg.total}</span>`; progressEl.style.width = "0%"; }
+        return;
+      }
+      img.src = "data:image/jpeg;base64," + msg.image;
+      img.style.display = "block";
+      placeholder.style.display = "none";
+      if (msg.round !== undefined && msg.total !== undefined) {
+        roundEl.innerHTML = `${msg.round}<span> / ${msg.total}</span>`;
+        progressEl.style.width = `${100 * msg.round / msg.total}%`;
+      }
+    };
+    ws.onclose = () => {
+      statusEl.textContent = "disconnected -- retrying in 2s (deploy.sh still running?)";
+      dotEl.classList.remove("connected");
+      setTimeout(connect, 2000);  // clap-rollout-deploy may not have started the server yet, or the run ended
+    };
+    ws.onerror = () => { ws.close(); };
+  }
+  connect();
+</script>
+</body>
+</html>

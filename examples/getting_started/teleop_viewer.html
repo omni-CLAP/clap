@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CLAP teleop live view</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0c10;
+    --panel: #15171c;
+    --border: #262a33;
+    --text: #e6e8eb;
+    --muted: #8b93a1;
+    --accent: #5ec2ff;
+    --accent-glow: rgba(94, 194, 255, 0.55);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body { display: flex; flex-direction: column; }
+  h1 {
+    flex: 0 0 auto; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; color: var(--muted);
+    margin: 0; padding: 20px 24px 0; text-transform: uppercase;
+  }
+  #layout {
+    display: flex; flex: 1 1 auto; min-height: 0; flex-wrap: wrap; align-items: flex-start;
+    justify-content: center; gap: 24px; padding: 24px; overflow: auto;
+  }
+  #main { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 1 1 480px; max-width: 1100px; }
+  #frame-wrap {
+    width: 100%; height: 80vh; max-height: 960px; background: #000; border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  #frame { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: none; }
+  #placeholder { color: var(--muted); font-size: 13px; text-align: center; padding: 0 20px; }
+  #status-bar { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  #dot { width: 8px; height: 8px; border-radius: 50%; background: #e5484d; transition: background 0.2s; }
+  #dot.connected { background: #30d158; }
+  #panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; flex: 0 0 260px; display: flex; flex-direction: column; gap: 18px;
+  }
+  .group-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .keys-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .key {
+    width: 40px; height: 40px; border-radius: 8px; background: #1d2027; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;
+    transition: background 0.1s, box-shadow 0.1s, transform 0.1s;
+  }
+  .key.wide { width: auto; padding: 0 12px; }
+  .key.active {
+    background: var(--accent); color: #06131c; box-shadow: 0 0 0 3px var(--accent-glow);
+    transform: scale(1.08);
+  }
+  .key-spacer { width: 40px; height: 40px; }
+  .wasd { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 6px; }
+  .legend { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .legend div span { color: var(--text); font-weight: 600; margin-right: 6px; }
+  #last-key { font-size: 12px; color: var(--muted); min-height: 16px; }
+  #last-key span { color: var(--accent); font-weight: 600; }
+  .session-row { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+  .session-row .label { color: var(--muted); }
+  .session-row .value { color: var(--text); font-weight: 600; }
+  #mode-section { display: none; }
+  #seed-wrap {
+    width: 100%; aspect-ratio: 4 / 3; background: #000; border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  #seed-frame { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: none; }
+  #seed-placeholder { color: var(--muted); font-size: 11px; text-align: center; padding: 0 10px; }
+</style>
+</head>
+<body>
+<h1>CLAP Teleop -- Live View</h1>
+<div id="layout">
+  <div id="main">
+    <div id="frame-wrap">
+      <img id="frame" alt="predicted frame">
+      <div id="placeholder">waiting for the first predicted frame&hellip;<br>press a key in the teleop terminal</div>
+    </div>
+    <div id="status-bar"><div id="dot"></div><span id="status">connecting&hellip;</span></div>
+    <div id="last-key">&nbsp;</div>
+  </div>
+
+  <div id="panel">
+    <div>
+      <div class="group-title">Session</div>
+      <div class="session-row"><span class="label">Dataset</span><span class="value" id="dataset-val">&mdash;</span></div>
+      <div class="session-row"><span class="label">Model</span><span class="value" id="model-val">&mdash;</span></div>
+    </div>
+    <div id="mode-section">
+      <div class="group-title">Mode</div>
+      <div class="session-row"><span class="label">Active target</span><span class="value" id="target-val">&mdash;</span></div>
+      <div class="session-row"><span class="label">Dual mode</span><span class="value" id="dual-val">&mdash;</span></div>
+    </div>
+    <div>
+      <div class="group-title">Initial Frame</div>
+      <div id="seed-wrap">
+        <img id="seed-frame" alt="initial frame">
+        <div id="seed-placeholder">waiting for session start&hellip;</div>
+      </div>
+    </div>
+
+    <!-- droid/bridge/taco_play: 7-dim single-arm cartesian scheme -->
+    <div id="keys-single">
+      <div>
+        <div class="group-title">Move (x / y)</div>
+        <div class="wasd">
+          <div class="key-spacer"></div><div class="key" data-key="w">W</div><div class="key-spacer"></div>
+          <div class="key" data-key="a">A</div><div class="key" data-key="s">S</div><div class="key" data-key="d">D</div>
+        </div>
+      </div>
+      <div>
+        <div class="group-title">Up / Down (z)</div>
+        <div class="keys-row">
+          <div class="key" data-key="z">Z</div>
+          <div class="key" data-key="x">X</div>
+        </div>
+      </div>
+      <div>
+        <div class="group-title">Roll / Pitch / Yaw</div>
+        <div class="keys-row">
+          <div class="key" data-key="e">E</div><div class="key" data-key="r">R</div>
+        </div>
+        <div class="keys-row">
+          <div class="key" data-key="o">O</div><div class="key" data-key="p">P</div>
+        </div>
+        <div class="keys-row">
+          <div class="key" data-key="t">T</div><div class="key" data-key="y">Y</div>
+        </div>
+      </div>
+      <div>
+        <div class="group-title">Gripper</div>
+        <div class="keys-row">
+          <div class="key" data-key="c">C</div>
+          <div class="key" data-key="v">V</div>
+        </div>
+      </div>
+      <div class="legend">
+        <div><span>W</span> forward (+x)</div>
+        <div><span>S</span> backward (-x)</div>
+        <div><span>A</span> left (-y)</div>
+        <div><span>D</span> right (+y)</div>
+        <div><span>Z</span> up (+z)</div>
+        <div><span>X</span> down (-z)</div>
+        <div><span>E / R</span> roll -/+</div>
+        <div><span>O / P</span> pitch -/+</div>
+        <div><span>T / Y</span> yaw -/+</div>
+        <div><span>C</span> close gripper</div>
+        <div><span>V</span> open gripper</div>
+      </div>
+    </div>
+
+    <!-- bimanual_yam/g1_humanoid: multi-target joint-space scheme -->
+    <div id="keys-multi">
+      <div>
+        <div class="group-title">Active target (+ / -)</div>
+        <div class="keys-row"><div class="key" data-key="q">Q</div><div class="key" data-key="a">A</div></div>
+        <div class="keys-row"><div class="key" data-key="w">W</div><div class="key" data-key="s">S</div></div>
+        <div class="keys-row"><div class="key" data-key="e">E</div><div class="key" data-key="d">D</div></div>
+        <div class="keys-row"><div class="key" data-key="r">R</div><div class="key" data-key="f">F</div></div>
+        <div class="keys-row"><div class="key" data-key="t">T</div><div class="key" data-key="g">G</div></div>
+        <div class="keys-row"><div class="key" data-key="y">Y</div><div class="key" data-key="h">H</div></div>
+        <div class="keys-row"><div class="key" data-key="u">U</div><div class="key" data-key="j">J</div></div>
+      </div>
+      <div>
+        <div class="group-title">Gripper (bimanual_yam only)</div>
+        <div class="keys-row">
+          <div class="key" data-key="c">C</div>
+          <div class="key" data-key="v">V</div>
+        </div>
+      </div>
+      <div>
+        <div class="group-title">Switch / Dual</div>
+        <div class="keys-row">
+          <div class="key wide" data-key="tab">Tab</div>
+          <div class="key wide" data-key="space">Space</div>
+        </div>
+      </div>
+      <div class="legend">
+        <div><span>Q W E R T Y U</span> + one joint dim each</div>
+        <div><span>A S D F G H J</span> - one joint dim each</div>
+        <div><span>U / J</span> 7th dim (g1_humanoid arm targets only)</div>
+        <div><span>C</span> close gripper (bimanual_yam only)</div>
+        <div><span>V</span> open gripper (bimanual_yam only)</div>
+        <div><span>Tab</span> cycle active target</div>
+        <div><span>Space</span> toggle dual mode (mirrors onto the left/right counterpart)</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div><span>Ctrl-C</span> quit (in the teleop terminal)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Same host clap-teleop's LiveViewServer binds to (localhost by default) -- override the
+  // port with ?port=NNNN if you started teleop.sh with a non-default --live-view-ws-port.
+  const port = new URLSearchParams(location.search).get("port") || 8765;
+  const statusEl = document.getElementById("status");
+  const dotEl = document.getElementById("dot");
+  const img = document.getElementById("frame");
+  const placeholder = document.getElementById("placeholder");
+  const lastKeyEl = document.getElementById("last-key");
+  const seedImg = document.getElementById("seed-frame");
+  const seedPlaceholder = document.getElementById("seed-placeholder");
+  const datasetEl = document.getElementById("dataset-val");
+  const modelEl = document.getElementById("model-val");
+  const modeSection = document.getElementById("mode-section");
+  const targetEl = document.getElementById("target-val");
+  const dualEl = document.getElementById("dual-val");
+  const keysSingleEl = document.getElementById("keys-single");
+  const keysMultiEl = document.getElementById("keys-multi");
+  let flashTimer = null;
+  let activePanel = keysSingleEl;  // which key panel flashKey should look inside -- swapped by setScheme
+
+  // bimanual_yam/g1_humanoid drive the multi-target scheme; everything else (droid/bridge/
+  // tahhco_play, and anything unknown) gets the original single-arm cartesian one.
+  function setScheme(dataset) {
+    const multi = dataset === "BIMANUAL_YAM" || dataset === "G1_HUMANOID";
+    keysSingleEl.style.display = multi ? "none" : "";
+    keysMultiEl.style.display = multi ? "" : "none";
+    modeSection.style.display = multi ? "block" : "none";  // explicit "block" (not "") -- "" only clears the inline override and falls back to #mode-section's own `display: none` stylesheet rule below, which would keep it hidden
+    activePanel = multi ? keysMultiEl : keysSingleEl;
+  }
+  modeSection.style.display = "none";
+  keysMultiEl.style.display = "none";
+
+  function flashKey(key) {
+    document.querySelectorAll(".key.active").forEach((el) => el.classList.remove("active"));
+    if (!key) return;
+    // Tab/Space have no printable data-key value of their own -- normalize to a matchable id.
+    const keyId = key === "\t" ? "tab" : key === " " ? "space" : key.toLowerCase();
+    const el = activePanel.querySelector(`.key[data-key="${keyId}"]`);
+    if (el) el.classList.add("active");
+    const label = key === "\t" ? "Tab" : key === " " ? "Space" : key;
+    lastKeyEl.innerHTML = `last key: <span>${label}</span>`;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => { if (el) el.classList.remove("active"); }, 350);
+  }
+
+  function connect() {
+    const ws = new WebSocket(`ws://localhost:${port}`);
+    ws.onopen = () => { statusEl.textContent = `connected (ws://localhost:${port})`; dotEl.classList.add("connected"); };
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.dataset !== undefined) { datasetEl.textContent = msg.dataset || "—"; setScheme(msg.dataset); }
+      if (msg.ckpt_name !== undefined) modelEl.textContent = msg.ckpt_name || "—";
+      // active_target/dual: present only for a multi-target session (bimanual_yam/g1_humanoid) --
+      // sent on every real step AND on a bare Tab/Space toggle (a meta_only message, no new frame).
+      if (msg.active_target !== undefined) targetEl.textContent = msg.active_target;
+      if (msg.dual !== undefined) dualEl.textContent = msg.dual ? "dual (mirrored)" : "single";
+      if (msg.meta_only) { flashKey(msg.key); return; }  // mode toggle only -- no image to show
+      if (msg.seed) {
+        // Own slot -- the episode's real first frame, set once per session and never
+        // overwritten by later live-prediction frames.
+        seedImg.src = "data:image/jpeg;base64," + msg.image;
+        seedImg.style.display = "block";
+        seedPlaceholder.style.display = "none";
+        return;
+      }
+      img.src = "data:image/jpeg;base64," + msg.image;
+      img.style.display = "block";
+      placeholder.style.display = "none";
+      flashKey(msg.key);
+    };
+    ws.onclose = () => {
+      statusEl.textContent = "disconnected -- retrying in 2s (teleop.sh still running?)";
+      dotEl.classList.remove("connected");
+      setTimeout(connect, 2000);  // clap-teleop may not have started the server yet, or the session ended
+    };
+    ws.onerror = () => { ws.close(); };
+  }
+  connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Cross-embodiment OXE mix, per-step language-caption conditioning.
+# action_caption_mode: "absolute" here; the _relative experiment overrides this to "relative".
+conditioning: language
+action_caption_mode: absolute
+oxe_base_path: ${oc.env:CLAP_OXE_BASE_PATH}
+dataset_meta_info_path: ${oc.env:CLAP_META_INFO_ROOT,dataset_meta_info}

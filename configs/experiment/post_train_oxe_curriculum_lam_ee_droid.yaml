@@ -1,0 +1,14 @@
+# Post-train: continue cross_embodiment_oxe_curriculum_lam_ee's cross-embodiment checkpoint, finetuned onto droid alone.
+defaults:
+  - model: base
+  - data: droid
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: post_train_oxe_curriculum_lam_ee_droid
+  output_dir: model_ckpt/post_train_oxe_curriculum_lam_ee_droid
+  finetune_ckpt: cross_embodiment_oxe_curriculum_lam_ee/checkpoint-100000.pt

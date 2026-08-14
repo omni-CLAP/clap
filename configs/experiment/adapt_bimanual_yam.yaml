@@ -1,0 +1,17 @@
+# Novel-embodiment adaptation: bimanual YAM (14-dim joint-space action: 6 joints +
+# gripper per arm), finetuned from the curriculum cross-embodiment checkpoint.
+# action_encoder is reset since its input dim changes (7-dim EE -> 14-dim joint-space).
+defaults:
+  - model: base
+  - data: bimanual_yam
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 14
+
+training:
+  tag: adapt_bimanual_yam
+  output_dir: model_ckpt/adapt_bimanual_yam
+  finetune_ckpt: cross_embodiment_oxe_curriculum_lam_ee/checkpoint-100000.pt
+  reset_action_encoder: true

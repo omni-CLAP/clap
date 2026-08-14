@@ -1,0 +1,14 @@
+# Post-train: continue cross_embodiment_oxe_language_relative's cross-embodiment checkpoint, finetuned onto bridge alone.
+defaults:
+  - model: base
+  - data: bridge
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: post_train_oxe_language_relative_bridge
+  output_dir: model_ckpt/post_train_oxe_language_relative_bridge
+  finetune_ckpt: cross_embodiment_oxe_language_relative/checkpoint-100000.pt

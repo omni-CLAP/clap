@@ -1,0 +1,6 @@
+# Cross-embodiment OXE mix, LAM latent-action conditioning.
+conditioning: lam
+oxe_base_path: ${oc.env:CLAP_OXE_BASE_PATH}
+oxe_lam_root: ${oc.env:CLAP_OXE_LAM_ROOT}
+oxe_lam_subdir: ${oc.env:CLAP_OXE_LAM_SUBDIR,latent_actions}
+dataset_meta_info_path: ${oc.env:CLAP_META_INFO_ROOT,dataset_meta_info}

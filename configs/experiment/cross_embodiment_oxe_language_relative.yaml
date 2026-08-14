@@ -1,0 +1,16 @@
+# Cross-embodiment modeling, per-step language-caption conditioning (relative-value captions).
+defaults:
+  - model: base
+  - data: language
+  - training: default
+
+model:
+  conditioning: language
+  action_dim: 7
+
+data:
+  action_caption_mode: relative
+
+training:
+  tag: cross_embodiment_oxe_language_relative
+  output_dir: model_ckpt/cross_embodiment_oxe_language_relative

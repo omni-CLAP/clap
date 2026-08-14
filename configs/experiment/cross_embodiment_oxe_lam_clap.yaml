@@ -1,0 +1,13 @@
+# Cross-embodiment modeling, LAM latent-action conditioning (clap's own extractor).
+defaults:
+  - model: base
+  - data: lam
+  - training: default
+
+model:
+  conditioning: lam
+  action_dim: 32
+
+training:
+  tag: cross_embodiment_oxe_lam_clap
+  output_dir: model_ckpt/cross_embodiment_oxe_lam_clap

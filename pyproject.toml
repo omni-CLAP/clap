@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clap"
+version = "0.1.0"
+description = "CLAP: cross-embodiment action-conditioned video world model — pretraining, post-training, and novel-embodiment adaptation."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "diffusers>=0.35.2",
+    "transformers==4.53.2",
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "accelerate",
+    "omegaconf",
+    "einops",
+    "numpy",
+    "scipy",
+    "pandas",
+    "decord",
+    "mediapy",
+    "wandb",
+    "swanlab",
+    "tqdm",
+    "clean-fid",
+    "lpips",
+    "scikit-image",
+    "opencv-python",
+    "bitsandbytes",
+    "rich",
+    "json_numpy",
+    "requests",
+    "websockets>=12",  # clap.rollout.teleop_viewer and policy-clients
+]
+
+[project.optional-dependencies]
+# Split in two because they have different Python floors: openpi itself needs
+# Python>=3.11 (in-process mode only -- see the README), while openpi_client (server
+# mode, talking to a standalone openpi server) is a tiny package needing just >=3.7,
+# so it installs fine into any clap-supported venv even on Python 3.9/3.10.
+openpi = ["openpi"]
+openpi-client = ["openpi_client"]
+# json_numpy: only needed for MolmoActPolicy's server (HTTP) mode, talking to one of
+# MolmoAct2's own inference servers -- in-process mode needs a separate lerobot-with-
+# MolmoAct2 install instead (see the README), not a pip extra of this package.
+molmoact = ["json_numpy", "requests"]
+dev = ["pytest", "pytest-cov"]
+
+[project.scripts]
+clap-train = "clap.training.train:main_cli"
+clap-rollout-replay = "clap.rollout.replay:main"
+clap-rollout-deploy = "clap.rollout.deploy:main"
+clap-teleop = "clap.rollout.teleop:main"
+clap-eval = "clap.eval.evaluate:main"
+clap-eval-aggregate = "clap.eval.aggregate:main"
+clap-eval-compare = "clap.eval.compare:main"
+clap-eval-capped-chunk-metrics = "clap.eval.capped_chunk_metrics:main"
+clap-eval-check-episode-sets = "clap.eval.check_episode_sets:main"
+clap-build-test-sets = "clap.eval.build_test_sets:main"
+clap-preprocess-oxe-meta = "clap.preprocess.oxe_meta:main"
+clap-preprocess-g1 = "clap.preprocess.g1_humanoid:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.uv.sources]
+# Pin torch/torchvision to the CUDA (cu128) wheel index, not plain PyPI — installing
+# this package editable must never silently fall back to a CPU-only build.
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

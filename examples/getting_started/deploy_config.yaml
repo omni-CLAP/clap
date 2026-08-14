@@ -1,0 +1,35 @@
+# RolloutDeployConfig for examples/getting_started/deploy.sh -- policy-in-the-loop
+# deployment (simulation mode, no live robot) seeded from this package's shipped
+# sample droid episodes. start_idx/instructions are left unset (None), so they're
+# auto-discovered from sample_data/oxe/droid directly (every episode starts at frame 0,
+# using its own recorded instruction) -- see RolloutDeployConfig's docstring.
+task_name: getting_started
+val_dataset_dir: sample_data/oxe
+dataset_name: droid
+episode_ids: ["0001", "0004", "0006"]  # pinned to droid episodes
+
+policy_type: molmoact2    # "pi05" | "pi0" | "pi0fast" (openpi) | "molmoact2" (default for DROID)
+
+# Required for openpi/pi0-family policy_type ("pi05"/"pi0"/"pi0fast")
+# PolicyInTheLoopAgent.__init__ loads this unconditionally whenever policy_type isn't
+# "molmoact2", server mode or not (openpi outputs joint-VELOCITY; this MLP converts that
+# into the joint-POSITION commands the sim/FK stepping needs). Not needed for MolmoAct2,
+# which predicts joint position directly.
+adapter_ckpt: "examples/getting_started/checkpoints/model2_15_9.pth"  # shipped with this repo -- verified to match EEVelocityToPositionAdapter(action_dim=7, action_num=15, hidden_size=512)
+
+# CLAP supports in-process and server-based policies (see the README's policy install section).
+
+# Option A: in-process -- openpi/MolmoAct2 loaded directly into this process.
+policy_ckpt: ""       # e.g. gs://openpi-assets/checkpoints/pi05_droid (openpi's default if left empty); or a MolmoAct2 checkpoint path
+# molmoact_norm_tag: franka_droid       # MolmoAct2 in-process only -- normalization stats the checkpoint expects
+# molmoact_include_wrist: true          # MolmoAct2 in-process only -- whether the checkpoint expects a wrist camera
+
+# Option B: server -- connect to a running policy server instead (comment out
+# policy_ckpt above, or leave it -- it's ignored whenever policy_server is set).
+# openpi:     uv run scripts/serve_policy.py --port=6080 policy:checkpoint --policy.config=pi05_droid --policy.dir=<ckpt_dir>   (from the openpi repo)
+# MolmoAct2:  uv run python examples/droid/host_server_droid.py --host 0.0.0.0 --port 8000   (from the allenai/molmoact2 repo)
+policy_server: "127.0.0.1:8000"
+
+interact_num: 15      # policy-call rounds per episode
+policy_skip_step: 2   # spacing between executed actions within a prediction (default 2) -- smaller = finer-grained motion per round
+history_idx: [0, 0, -48, -32, -24, -16]  # sparse history offsets (num_history=6) instead of the last 6 contiguous frames

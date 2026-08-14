@@ -1,0 +1,17 @@
+# Curriculum: continue cross_embodiment_oxe_lam_clap's checkpoint with EE-cartesian
+# actions instead of LAM latents. action_encoder is reset since its input dim changes
+# (32-dim LAM latent -> 7-dim EE); everything else (UNet/VAE/image_encoder) transfers.
+defaults:
+  - model: base
+  - data: ee
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: cross_embodiment_oxe_curriculum_lam_ee
+  output_dir: model_ckpt/cross_embodiment_oxe_curriculum_lam_ee
+  finetune_ckpt: cross_embodiment_oxe_lam_clap/checkpoint-50000.pt
+  reset_action_encoder: true

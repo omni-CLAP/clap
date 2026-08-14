@@ -1,0 +1,14 @@
+# Post-train: continue cross_embodiment_oxe_language_absolute's cross-embodiment checkpoint, finetuned onto droid alone.
+defaults:
+  - model: base
+  - data: droid
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: post_train_oxe_language_absolute_droid
+  output_dir: model_ckpt/post_train_oxe_language_absolute_droid
+  finetune_ckpt: cross_embodiment_oxe_language_absolute/checkpoint-100000.pt

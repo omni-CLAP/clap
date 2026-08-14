@@ -1,0 +1,14 @@
+# Post-train: continue cross_embodiment_oxe_curriculum_lam_ee's cross-embodiment checkpoint, finetuned onto bridge alone.
+defaults:
+  - model: base
+  - data: bridge
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: post_train_oxe_curriculum_lam_ee_bridge
+  output_dir: model_ckpt/post_train_oxe_curriculum_lam_ee_bridge
+  finetune_ckpt: cross_embodiment_oxe_curriculum_lam_ee/checkpoint-100000.pt

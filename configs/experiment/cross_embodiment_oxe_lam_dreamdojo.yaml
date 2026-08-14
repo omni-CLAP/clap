@@ -1,0 +1,21 @@
+# LAM latent-action conditioning, dreamdojo extractor variant — trained on egodex
+# (human video) ALONE, not the full cross-embodiment mix. egodex_lam_subdir matches
+# clap.data.lam.EGODEX_ONLY_LAM_SUBDIR_MARKERS, which is what actually triggers
+# egodex-only mode (setting oxe_lam_subdir instead would apply the dreamdojo extractor
+# to every dataset in the mix, which is not what this experiment is). Still evaluated
+# across the full OXE_LAM_DATASET_ORDER at eval time, to measure human-video-only transfer.
+defaults:
+  - model: base
+  - data: lam
+  - training: default
+
+model:
+  conditioning: lam
+  action_dim: 32
+
+data:
+  egodex_lam_subdir: dreamdojo_latent_actions_skip_1
+
+training:
+  tag: cross_embodiment_oxe_lam_dreamdojo
+  output_dir: model_ckpt/cross_embodiment_oxe_lam_dreamdojo

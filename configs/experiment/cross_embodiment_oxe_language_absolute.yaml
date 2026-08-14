@@ -1,0 +1,13 @@
+# Cross-embodiment modeling, per-step language-caption conditioning (absolute-value captions).
+defaults:
+  - model: base
+  - data: language
+  - training: default
+
+model:
+  conditioning: language
+  action_dim: 7
+
+training:
+  tag: cross_embodiment_oxe_language_absolute
+  output_dir: model_ckpt/cross_embodiment_oxe_language_absolute

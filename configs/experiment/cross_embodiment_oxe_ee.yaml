@@ -1,0 +1,13 @@
+# Cross-embodiment modeling, EE-cartesian conditioning: 7 OXE datasets, 7-dim action.
+defaults:
+  - model: base
+  - data: ee
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: cross_embodiment_oxe_ee
+  output_dir: model_ckpt/cross_embodiment_oxe_ee

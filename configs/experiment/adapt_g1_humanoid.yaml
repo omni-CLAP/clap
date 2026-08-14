@@ -1,0 +1,19 @@
+# Novel-embodiment adaptation: G1 humanoid (26-dim joint-space action: 7+7 arms, 6+6
+# BrainCo hands; 4-view 768x320 stack), finetuned from the curriculum cross-embodiment
+# checkpoint. action_encoder is reset (7-dim EE -> 26-dim joint-space); smaller batch
+# size than other experiments since the 4-view input is larger (768H vs. 576H).
+defaults:
+  - model: base
+  - data: g1_humanoid
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 26
+
+training:
+  tag: adapt_g1_humanoid
+  output_dir: model_ckpt/adapt_g1_humanoid
+  finetune_ckpt: cross_embodiment_oxe_curriculum_lam_ee/checkpoint-100000.pt
+  reset_action_encoder: true
+  train_batch_size: 3

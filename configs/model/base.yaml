@@ -1,0 +1,7 @@
+# Shared CLAPModelConfig defaults (see clap.config.model.CLAPModelConfig).
+# Every real training run in this repo uses num_history=6/num_frames=5;
+# conditioning/action_dim are architecture-specific and set per-experiment.
+svd_model_path: ${oc.env:CLAP_SVD_MODEL_PATH,stabilityai/stable-video-diffusion-img2vid}
+clip_model_path: ${oc.env:CLAP_CLIP_MODEL_PATH,openai/clip-vit-base-patch32}
+num_history: 6
+num_frames: 5

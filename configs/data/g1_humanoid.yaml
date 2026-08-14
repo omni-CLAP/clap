@@ -1,0 +1,6 @@
+# Single-dataset joint-space conditioning: G1 humanoid adaptation target (26-dim action, 4-view stack).
+conditioning: g1_humanoid
+oxe_base_path: ${oc.env:CLAP_OXE_BASE_PATH}
+dataset_meta_info_path: ${oc.env:CLAP_META_INFO_ROOT,dataset_meta_info}
+height: 768 # 4 camera slots x 192, vs. the 3-view/2-view datasets' 576
+width: 320

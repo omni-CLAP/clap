@@ -1,0 +1,4 @@
+# Cross-embodiment OXE mix, EE-cartesian action conditioning.
+conditioning: ee
+oxe_base_path: ${oc.env:CLAP_OXE_BASE_PATH}
+dataset_meta_info_path: ${oc.env:CLAP_META_INFO_ROOT,dataset_meta_info}

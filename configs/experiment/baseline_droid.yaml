@@ -1,0 +1,13 @@
+# Single-embodiment baseline: droid alone, trained from scratch (no cross-embodiment modeling).
+defaults:
+  - model: base
+  - data: droid
+  - training: default
+
+model:
+  conditioning: ee
+  action_dim: 7
+
+training:
+  tag: baseline_droid
+  output_dir: model_ckpt/baseline_droid

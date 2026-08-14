@@ -1,0 +1,4 @@
+# Single-dataset joint-space conditioning: bimanual YAM adaptation target (14-dim action).
+conditioning: bimanual_yam
+oxe_base_path: ${oc.env:CLAP_OXE_BASE_PATH}
+dataset_meta_info_path: ${oc.env:CLAP_META_INFO_ROOT,dataset_meta_info}

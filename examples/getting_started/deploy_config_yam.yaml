@@ -1,0 +1,31 @@
+# RolloutDeployConfig for examples/getting_started/deploy_yam.sh -- policy-in-the-loop
+# deployment (simulation mode, no live robot) seeded from this package's shipped sample
+# bimanual_yam episodes. start_idx/instructions are left unset (None), so they're
+# auto-discovered from sample_data/oxe/bimanual_yam directly (every episode starts at frame 0,
+# using its own recorded instruction) -- see RolloutDeployConfig's docstring.
+#
+# bimanual_yam is joint-space (action_mode="joint14") -- clap.rollout.deploy skips forward
+# kinematics entirely for it and conditions the world model on the raw predicted 14-dim
+# dual-arm joint+gripper state directly. Only MolmoAct2 has a bimanual_yam checkpoint (openpi
+# is DROID-only), and only server mode is wired up so far -- see this repo's README's
+# bimanual_yam deploy section.
+task_name: getting_started_yam
+val_dataset_dir: sample_data/oxe
+dataset_name: bimanual_yam
+episode_ids: ["989", "21000", "26579"]  # pinned to the 3 sample bimanual_yam episodes shipped with this repo
+
+policy_type: molmoact2  # the only supported policy_type for bimanual_yam -- openpi has no YAM checkpoint
+
+# Server mode only -- start the MolmoAct2 YAM server from the allenai/molmoact2 repo:
+#   uv run python examples/yam/host_server_yam.py --host 0.0.0.0 --port 8000
+# then point policy_server at wherever that's running (host:port), or override at the command
+# line without editing this file: POLICY_SERVER_OVERRIDE=host:port bash examples/getting_started/deploy_yam.sh
+policy_server: "127.0.0.1:8202"
+
+interact_num: 30      # policy-call rounds per episode
+policy_skip_step: 2   # fallback if policy_skip_step_schedule is ever unset -- superseded by it below otherwise
+policy_skip_step_schedule: [4, 2, 2, 2, 2, 1]  # rounds 0-1 skip 4 (cover more ground per world-model call
+                                       # while the self-driven state is still far from the seed
+                                       # episode's own trajectory); round 2+ settles to 2, same as
+                                       # the flat policy_skip_step above
+history_idx: [0, 0, -48, -32, -24, -16]  # sparse history offsets (num_history=6) instead of the last 6 contiguous frames
